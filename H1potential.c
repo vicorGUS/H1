@@ -481,12 +481,13 @@ void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], dou
     }
 }
 
-void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], int n_timesteps, double dt, double a, double tau_T, double tau_P, double T_eq, double P_eq, double m, double T[n_timesteps+1], double P[n_timesteps+1]){
+void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], int n_timesteps, double dt, double a, double tau_T, double tau_P, double T_eq, double P_eq, double m, double T[n_timesteps+1], double P[n_timesteps+1], double a_eq[n_timesteps+1]){
     double a_T[n_timesteps+1];
     double a_P[n_timesteps+1];
     double k = 8.6173 * pow(10, -5);
     double v_abs_2[nbr_atoms];
-    double V = 4 * a * a * a;
+    double V = a * a * a;
+    double V_eq[n_timesteps+1];
     double kappa_T = 0.01385 * 1e-9;
     
     for (int j = 0; j < nbr_atoms; j++){
@@ -514,7 +515,7 @@ void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][
             v_abs_2[j] = a_T[i] * v_abs_2[j];
             
             for (int d = 0; d < 3; d++){
-                pos[j][d] = pow(a_P[i], 1/3) * pos[j][d];
+                pos[j][d] = pow(a_P[i], 1.0/3.0) * pos[j][d];
             }
 
             T[i] += (1 / (3 * nbr_atoms * k)) * v_abs_2[j] * m;
@@ -522,9 +523,12 @@ void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][
             
             }
         
-        P[i] += (1 / V) * get_virial_AL(pos, 4 * a, 256);
+        a_eq[i] = pos[1][0] - pos[0][0];
+        V_eq[i] = pow(a_eq[i], 3);
         
-        if(fabs(T_eq - T[i]) < 1e-4 && fabs(P_eq - P[i]) < 1e-4){
+        P[i] += (1 / V_eq[i]) * get_virial_AL(pos, 4 * a_eq[i], 256);
+            
+        if(fabs(T_eq - T[i]) < 1e-3 && fabs(P_eq - P[i]) < 1e-2){
             a_T[i+1] = 1.0;
             a_P[i+1] = 1.0;
         }
@@ -534,5 +538,6 @@ void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][
             a_P[i+1] = 1 - (kappa_T * dt / tau_P) * (P_eq - P[i]);
         }
         printf("Iteration: %i T: %f P: %f\n", i, T[i], P[i]);
+        printf("Lattice parameter: %f\n", a_eq[i]);
         }
 }
