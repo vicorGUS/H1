@@ -31,6 +31,8 @@ void write_to_file(char *fname, double *time_array,
     fclose(fp);
 }
 
+void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], int n_timesteps, double dt, double a, double tau_T, double tau_P, double T_eq, double P_eq, double m, double T[n_timesteps+1], double P[n_timesteps+1]);
+
 /* Main program */
 int main()
 {
@@ -158,11 +160,29 @@ int main()
 
     //write_to_file("Ep.csv", time_array, Ep, timestep);
     //write_to_file("Ek.csv", time_array, Ek, timestep);
+
+//    double T;
+//
+//    T = 2 / (3 * 256 * 8.6173 * pow(10, -5)) * (64 * Ek_avg);
+//    printf("%f\n", T);
+
+    double tau_T = 1.0e-2;
+    double tau_P = 1.0e-5;
+    double dt_eq = 0.0001;
+    int timestep_eq = 1000;
+    double T_eq = 500 + 273.15;
+    double P_eq = 100000.0;
+    double T[timestep_eq+1];
+    double P[timestep_eq+1];
+    double pos_eq[256][3];
+    double a_eq = 4.0478;
+    init_fcc(pos_eq, a_eq, 256);
+    Equilibration(256, v, pos_eq, timestep_eq, dt_eq, a_eq, tau_T, tau_P, T_eq, P_eq, m, T, P);
     
-    double T;
-    
-    T = 2 / (3 * 256 * 8.6173 * pow(10, -5)) * (64 * Ek_avg);
-    printf("%f\n", T);
+    for (int i = 0; i < timestep_eq+1; i++){
+        //printf("%i %f\n",i, T[i]);
+        //printf("%i %f\n",i, P[i]);
+    }
     
     return 0;
 }

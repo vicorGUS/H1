@@ -480,3 +480,59 @@ void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], dou
         
     }
 }
+
+void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], int n_timesteps, double dt, double a, double tau_T, double tau_P, double T_eq, double P_eq, double m, double T[n_timesteps+1], double P[n_timesteps+1]){
+    double a_T[n_timesteps+1];
+    double a_P[n_timesteps+1];
+    double k = 8.6173 * pow(10, -5);
+    double v_abs_2[nbr_atoms];
+    double V = 4 * a * a * a;
+    double kappa_T = 0.01385 * 1e-9;
+    
+    for (int j = 0; j < nbr_atoms; j++){
+        for (int d = 0; d < 3; d++){
+            if (fabs(v[j][d]) < 1000.0){
+                v_abs_2[j] += pow(v[j][d],2);
+            }
+            else{
+                v_abs_2[j] = 0.0;
+            }
+        }
+        T[0] += (1 / (3 * nbr_atoms * k)) * v_abs_2[j] * m;
+        P[0] += (1 / (3 * V)) * v_abs_2[j] * m;
+
+    }
+    P[0] += (1 / V) * get_virial_AL(pos, 4 * a, 256);
+    
+    a_T[0] = 1 + 2 * dt / tau_T * (T_eq - T[0]) / T[0];
+    a_P[0] = 1 - kappa_T * dt / tau_P * (P_eq - P[0]);
+    
+    for (int i = 0; i < n_timesteps + 1; i++){
+        
+        for (int j = 0; j < nbr_atoms; j++){
+
+            v_abs_2[j] = a_T[i] * v_abs_2[j];
+            
+            for (int d = 0; d < 3; d++){
+                pos[j][d] = pow(a_P[i], 1/3) * pos[j][d];
+            }
+
+            T[i] += (1 / (3 * nbr_atoms * k)) * v_abs_2[j] * m;
+            P[i] += (1 / (3 * V)) * v_abs_2[j] * m;
+            
+            }
+        
+        P[i] += (1 / V) * get_virial_AL(pos, 4 * a, 256);
+        
+        if(fabs(T_eq - T[i]) < 1e-4 && fabs(P_eq - P[i]) < 1e-4){
+            a_T[i+1] = 1.0;
+            a_P[i+1] = 1.0;
+        }
+        
+        else{
+            a_T[i+1] = 1 + (2 * dt / tau_T) * (T_eq - T[i]) / T[i];
+            a_P[i+1] = 1 - (kappa_T * dt / tau_P) * (P_eq - P[i]);
+        }
+        printf("Iteration: %i T: %f P: %f\n", i, T[i], P[i]);
+        }
+}
