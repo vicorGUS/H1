@@ -481,14 +481,18 @@ void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], dou
     }
 }
 
-void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], int n_timesteps, double dt, double a, double tau_T, double tau_P, double T_eq, double P_eq, double m, double T[n_timesteps+1], double P[n_timesteps+1], double a_eq[n_timesteps+1]){
+void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], int n_timesteps, double dt, double a, double tau_T, double tau_P, double T_eq, double P_eq, double m, double T[n_timesteps+1], double P[n_timesteps+1], double a_eq[n_timesteps+1], double q[5][3][n_timesteps+1]){
+    
     double a_T[n_timesteps+1];
     double a_P[n_timesteps+1];
     double k = 8.6173 * pow(10, -5);
     double v_abs_2[nbr_atoms];
-    double V = a * a * a;
     double V_eq[n_timesteps+1];
-    double kappa_T = 0.01385 * 1e-9;
+    double kappa_T = 0.01385;
+    int P_start = 10000;
+    
+    a_eq[0] = a;
+    V_eq[0] = pow(a_eq[0], 3);
     
     for (int j = 0; j < nbr_atoms; j++){
         for (int d = 0; d < 3; d++){
@@ -500,44 +504,64 @@ void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][
             }
         }
         T[0] += (1 / (3 * nbr_atoms * k)) * v_abs_2[j] * m;
-        P[0] += (1 / (3 * V)) * v_abs_2[j] * m;
 
     }
-    P[0] += (1 / V) * get_virial_AL(pos, 4 * a, 256);
     
     a_T[0] = 1 + 2 * dt / tau_T * (T_eq - T[0]) / T[0];
-    a_P[0] = 1 - kappa_T * dt / tau_P * (P_eq - P[0]);
     
-    for (int i = 0; i < n_timesteps + 1; i++){
-        
-        for (int j = 0; j < nbr_atoms; j++){
-
-            v_abs_2[j] = a_T[i] * v_abs_2[j];
-            
-            for (int d = 0; d < 3; d++){
-                pos[j][d] = pow(a_P[i], 1.0/3.0) * pos[j][d];
-            }
-
-            T[i] += (1 / (3 * nbr_atoms * k)) * v_abs_2[j] * m;
-            P[i] += (1 / (3 * V)) * v_abs_2[j] * m;
-            
-            }
+    for (int i = 0; i < P_start + 1; i++){
         
         a_eq[i] = pos[1][0] - pos[0][0];
         V_eq[i] = pow(a_eq[i], 3);
         
-        P[i] += (1 / V_eq[i]) * get_virial_AL(pos, 4 * a_eq[i], 256);
-            
-        if(fabs(T_eq - T[i]) < 1e-3 && fabs(P_eq - P[i]) < 1e-2){
-            a_T[i+1] = 1.0;
-            a_P[i+1] = 1.0;
-        }
+        for (int j = 0; j < nbr_atoms; j++){
+
+            v_abs_2[j] = a_T[i] * v_abs_2[j];
+
+            T[i] += (1 / (3 * nbr_atoms * k)) * v_abs_2[j] * m;
+
+            }
         
-        else{
-            a_T[i+1] = 1 + (2 * dt / tau_T) * (T_eq - T[i]) / T[i];
-            a_P[i+1] = 1 - (kappa_T * dt / tau_P) * (P_eq - P[i]);
+        
+        a_T[i+1] = 1 + (2 * dt / tau_T) * (T_eq - T[i]) / T[i];
+
+
         }
-        printf("Iteration: %i T: %f P: %f\n", i, T[i], P[i]);
-        printf("Lattice parameter: %f\n", a_eq[i]);
+    
+    for (int j = 0; j < nbr_atoms; j++){
+        for (int d = 0; d < 3; d++){
+            if (fabs(v[j][d]) < 10000.0){
+                v_abs_2[j] += pow(v[j][d],2);
+            }
+            else{
+                v_abs_2[j] = 0.0;
+            }
         }
+        P[P_start] += (1 / (3 * V_eq[P_start])) * v_abs_2[j] * m * 160.21766208;
+    }
+    
+    P[P_start] += (1 / V_eq[P_start]) * get_virial_AL(pos, 4 * a_eq[P_start], 256) * 160.21766208;
+    
+    a_P[P_start] = 1 - kappa_T * dt / tau_P * (P_eq - P[P_start]);
+    
+    for (int i = P_start; i < n_timesteps; i++){
+        
+        a_eq[i] = pos[1][0] - pos[0][0];
+        V_eq[i] = pow(a_eq[i], 3);
+        
+        for (int j = 0; j < nbr_atoms; j++){
+            for (int d = 0; d < 3; d++){
+                pos[j][d] = pow(a_P[i], 1.0/3.0) * pos[j][d];
+                
+            }
+            P[i] += (1 / (3 * V_eq[i])) * v_abs_2[j] * m * 160.21766208;
+        }
+        P[i] += (1 / V_eq[i]) * get_virial_AL(pos, 4 * a_eq[i], 256) * 160.21766208;
+        
+        a_P[i+1] = 1 - (kappa_T * dt / tau_P) * (P_eq - P[i]);
+        
+        printf("diff: %f\n", P_eq-P[i]);
+        
+    }
+    
 }
