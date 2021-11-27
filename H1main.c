@@ -12,7 +12,7 @@
 #include "H1lattice.h"
 #include "H1potential.h"
 
-void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], double L, double dt, double m, double *E_pot, double *E_kin);
+void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], double a, double dt, double m, double T[n_timesteps+1], double P[n_timesteps+1], double *E_pot, double *E_kin, double tau_T, double tau_P, double T_eq, double P_eq, double q1[n_timesteps][2], double q2[n_timesteps][2], double q3[n_timesteps][2]);
 
 void arange(double *array, double start, int len_t, double dt){
     for(int i = 0; i < len_t; i++){
@@ -31,7 +31,14 @@ void write_to_file(char *fname, double *time_array,
     fclose(fp);
 }
 
-void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], int n_timesteps, double dt, double a, double tau_T, double tau_P, double T_eq, double P_eq, double m, double T[n_timesteps+1], double P[n_timesteps+1], double a_eq[n_timesteps+1], double q[5][3][n_timesteps+1]);
+void trajectiores(char *fname, int n_points, double q1[n_points][2], double q2[n_points][2], double q3[n_points][2])
+{
+    FILE *fp = fopen(fname, "w");
+    for(int i = 0; i < n_points; ++i){
+        fprintf(fp, "%f,%f,%f,%f,%f,%f\n", q1[i][0], q1[i][1], q2[i][0], q2[i][1], q3[i][0], q3[i][1]);
+    }
+    fclose(fp);
+}
 
 /* Main program */
 int main()
@@ -52,8 +59,8 @@ int main()
      H1potential.c are listed below.
     */
     
-    /* 
-     Function that generates a fcc lattice in units of [Å]. Nc is the number of 
+    /*
+     Function that generates a fcc lattice in units of [Å]. Nc is the number of
      primitive cells in each direction and a0 is the lattice parameter. The
      positions of all the atoms are stored in pos which should be a matrix of the
      size N x 3, where N is the number of atoms. The first, second and third column
@@ -63,9 +70,9 @@ int main()
      init_fcc(pos, Nc, a0);
     */
     
-    /* 
+    /*
      Function that calculates the potential energy in units of [eV]. pos should be
-     a matrix containing the positions of all the atoms, L is the length of the 
+     a matrix containing the positions of all the atoms, L is the length of the
      supercell and N is the number of atoms.
     */
     /*
@@ -73,9 +80,9 @@ int main()
      energy = get_energy_AL(pos, L, N);
     */
     
-    /* 
+    /*
      Function that calculates the virial in units of [eV]. pos should be a matrix
-     containing the positions of all the atoms, L is the length of the supercell 
+     containing the positions of all the atoms, L is the length of the supercell
      and N is the number of atoms.
     */
     /*
@@ -84,10 +91,10 @@ int main()
     */
     
     /*
-     Function that calculates the forces on all atoms in units of [eV/Å]. the 
+     Function that calculates the forces on all atoms in units of [eV/Å]. the
      forces are stored in f which should be a matrix of size N x 3, where N is the
      number of atoms and column 1,2 and 3 correspond to the x,y and z component of
-     the force resepctively . pos should be a matrix containing the positions of 
+     the force resepctively . pos should be a matrix containing the positions of
      all the atoms, L is the length of the supercell and N is the number of atoms.
     */
     /*
@@ -108,51 +115,56 @@ int main()
         init_fcc(pos, Nc, a0[i]);
         E_pot[i] = get_energy_AL(pos, Nc * a0[i], 256) / pow(Nc, 3);
     }
-    
+
     FILE *fp = fopen("E_pot.csv", "w");
     fprintf(fp, "Volume(Å), Energy\n");
     for(int i = 0; i < n_points; ++i){
         fprintf(fp, "%f,%f\n", pow(a0[i],3), E_pot[i]);
-        
+
     }
     fclose(fp);
-    
-    
+
+
     double a=4.0478;
     double m=0.002796;
 
     int timestep = 10000;
-    double dt = 0.0001;
-    
+    double dt = 1e-2;
+
     double v[256][3];
-    double pos_dev[4*Nc*Nc*Nc][3];
+    double pos_dev[256][3];
     double Ep[timestep+1];
     double Ek[timestep+1];
     
+    double T[timestep+1];
+    double P[timestep+1];
+    
+    double T_eq = 500.0 + 273.15;
+    double P_eq = 1.0e-4;
+    
+    double tau_T = 2e2 * dt;
+    double tau_P = 1e-1 * dt;
+    
+    double q1[timestep][2];
+    double q2[timestep][2];
+    double q3[timestep][2];
+
     init_fcc(pos_dev, Nc, a);
-    
-    srand(time(NULL));
-    
+
+    srand((unsigned int)time(NULL));
+
     for (int j = 0; j < 256; j++){
-        for(int d=0; d<3; d++){
+        for(int d = 0; d < 3; d++){
             pos_dev[j][d] += -0.263107 + (double) rand() / ((double) RAND_MAX / (2 * 0.263107));
         }
     }
-    
-    velocity_verlet(timestep, 256, v, pos_dev, a, dt, m, Ep, Ek);
-    double Ek_avg=0;
-    for (int i = 0; i < timestep+1; i++){
-        if(fabs(Ek[i]) < 100.0){
-            Ek_avg += Ek[i] / (timestep+1);
-        }
-        else{
-            Ek[i]= 0.0/0.0;
-        }
-    }
-    for (int i = 0; i < timestep+1; i++){
-        if(Ep[i] > 0.0){
-            Ep[i] = 0.0/0.0;
-        }
+    velocity_verlet(timestep, 256, v, pos_dev, a, dt, m, T, P, Ep, Ek, tau_T, tau_P, T_eq, P_eq, q1, q2, q3);
+
+    double T_avg = 0.0;
+    double P_avg = 0.0;
+    for (int i = 3000; i < timestep+1; i++){
+        T_avg += T[i] / (timestep+1 - 1000.0);
+        P_avg += P[i] / (timestep+1 - 1000.0);
     }
 
     double time_array[timestep+1];
@@ -160,39 +172,15 @@ int main()
 
     write_to_file("Ep.csv", time_array, Ep, timestep);
     write_to_file("Ek.csv", time_array, Ek, timestep);
+    
+    write_to_file("T.csv", time_array, T, timestep);
+    write_to_file("P.csv", time_array, P, timestep);
+    
+    trajectiores("q.csv", timestep, q1, q2, q3);
 
-//    double T;
-//
-//    T = 2 / (3 * 256 * 8.6173 * pow(10, -5)) * (64 * Ek_avg);
-//    printf("%f\n", T);
+    printf("T_avg = %f T_eq = %f\n", T_avg, T_eq);
+    printf("P_avg = %f P_eq = %f\n", P_avg, P_eq);
 
-    double tau_T = 1.0e-3;
-    double tau_P = 1.0e-3;
-    double dt_eq = 1.0e-6;
-    int timestep_eq = 15000;
-    double T_eq = 500.0 + 273.15; //Kelvin
-    double P_eq = 1.0e-4; //Gpa
-    double T[timestep_eq+1];
-    double P[timestep_eq+1];
-    double a_eq[timestep+1];
-    double pos_eq[256][3];
-    double q[5][3][timestep_eq+1];
-    
-    init_fcc(pos_eq, 4, a);
-    Equilibration(256, v, pos_eq, timestep_eq, dt_eq, a, tau_T, tau_P, T_eq, P_eq, m, T, P, a_eq, q);
-    
-    for (int i = 0; i < 10001; i++){
-        printf("%i T: %f\n",i, T[i]);
-    }
-    for (int i = 10000; i < timestep; i++){
-        printf("%i P: %f\n",i, P[i]);
-    }
-    
-    //double time_array_eq[timestep_eq+1];
-    //arange(time_array_eq, 0, timestep_eq, dt_eq);
-    
-    //write_to_file("Temperature_eq.csv", time_array_eq, T, timestep_eq);
-    //write_to_file("Pressure_eq.csv", time_array_eq, P, timestep_eq);
-    
     return 0;
 }
+

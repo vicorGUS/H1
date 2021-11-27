@@ -1,6 +1,6 @@
 /*
  H1potential.c
- Program that contains functions that calculate properties (potential energy, forces, etc.) of a set of Aluminum atoms using an embedded atom model (EAM) potential.  
+ Program that contains functions that calculate properties (potential energy, forces, etc.) of a set of Aluminum atoms using an embedded atom model (EAM) potential.
  Created by Anders Lindman on 2013-03-14.
  */
 
@@ -24,67 +24,67 @@ const double embedding_energy[65] = {0, 0.1000, 0.2000, 0.3000, 0.4000, 0.5000, 
 /* Evaluates the spline in x. */
 
 double splineEval(double x, const double *table,int m) {
-	/* int m = mxGetM(spline), i, k;*/
-	int i, k;
+    /* int m = mxGetM(spline), i, k;*/
+    int i, k;
   
   /*double *table = mxGetPr(spline);*/
-	double result;
+    double result;
   
-	int k_lo = 0, k_hi = m;
+    int k_lo = 0, k_hi = m;
   
-	/* Find the index by bisection. */
-	while (k_hi - k_lo > 1) {
-		k = (k_hi + k_lo) >> 1;
-		if (table[k] > x)
-			k_hi = k;
-		else
-			k_lo = k;
-	}
+    /* Find the index by bisection. */
+    while (k_hi - k_lo > 1) {
+        k = (k_hi + k_lo) >> 1;
+        if (table[k] > x)
+            k_hi = k;
+        else
+            k_lo = k;
+    }
   
-	/* Switch to local coord. */
-	x -= table[k_lo];
+    /* Switch to local coord. */
+    x -= table[k_lo];
   
-	/* Horner's scheme */
-	result = table[k_lo + 4*m];
-	for (i = 3; i > 0; i--) {
-		result *= x;
-		result += table[k_lo + i*m];
-	}
+    /* Horner's scheme */
+    result = table[k_lo + 4*m];
+    for (i = 3; i > 0; i--) {
+        result *= x;
+        result += table[k_lo + i*m];
+    }
   
-	return result;
+    return result;
 }
 
 /* Evaluates the derivative of the spline in x. */
 
 double splineEvalDiff(double x, const double *table, int m) {
-	/*int m = mxGetM(spline), i, k;
+    /*int m = mxGetM(spline), i, k;
    double *table = mxGetPr(spline);
    */
   int i, k;
   double result;
   
-	int k_lo = 0, k_hi = m;
+    int k_lo = 0, k_hi = m;
   
-	/* Find the index by bisection. */
-	while (k_hi - k_lo > 1) {
-		k = (k_hi + k_lo) >> 1;
-		if (table[k] > x)
-			k_hi = k;
-		else
-			k_lo = k;
-	}
+    /* Find the index by bisection. */
+    while (k_hi - k_lo > 1) {
+        k = (k_hi + k_lo) >> 1;
+        if (table[k] > x)
+            k_hi = k;
+        else
+            k_lo = k;
+    }
   
-	/* Switch to local coord. */
-	x -= table[k_lo];
+    /* Switch to local coord. */
+    x -= table[k_lo];
   
-	/* Horner's scheme */
-	result = 3*table[k_lo + 4*m];
-	for (i = 3; i > 1; i--) {
-		result *= x;
-		result += (i-1)*table[k_lo + i*m];
-	}
+    /* Horner's scheme */
+    result = 3*table[k_lo + 4*m];
+    for (i = 3; i > 1; i--) {
+        result *= x;
+        result += (i-1)*table[k_lo + i*m];
+    }
   
-	return result;
+    return result;
 }
 
 /* Returns the forces */
@@ -128,29 +128,29 @@ void get_forces_AL(double forces[][3], double positions[][3], double cell_length
   
   for (i = 0; i < nbr_atoms; i++) {
     /* Periodically translate coords of current particle to positive quadrants */
-		sxi = sx[i] - floor(sx[i]);
-		syi = sy[i] - floor(sy[i]);
-		szi = sz[i] - floor(sz[i]);
+        sxi = sx[i] - floor(sx[i]);
+        syi = sy[i] - floor(sy[i]);
+        szi = sz[i] - floor(sz[i]);
     
     densityi = density[i];
-		
-		/* Loop over other atoms. */
-		for (j = i + 1; j < nbr_atoms; j++) {
+        
+        /* Loop over other atoms. */
+        for (j = i + 1; j < nbr_atoms; j++) {
       /* Periodically translate atom j to positive quadrants and calculate distance to it. */
-			sxij = sxi - (sx[j] - floor(sx[j]));
-			syij = syi - (sy[j] - floor(sy[j]));
-			szij = szi - (sz[j] - floor(sz[j]));
+            sxij = sxi - (sx[j] - floor(sx[j]));
+            syij = syi - (sy[j] - floor(sy[j]));
+            szij = szi - (sz[j] - floor(sz[j]));
       
       /* Periodic boundary conditions. */
-			sxij = sxij - (int)floor(sxij + 0.5);
-			syij = syij - (int)floor(syij + 0.5);
-			szij = szij - (int)floor(szij + 0.5);
+            sxij = sxij - (int)floor(sxij + 0.5);
+            syij = syij - (int)floor(syij + 0.5);
+            szij = szij - (int)floor(szij + 0.5);
       
       /* squared distance between atom i and j */
-			rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
+            rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
       
       /* Add force and energy contribution if distance between atoms smaller than rcut */
-			if (rij_sq < rcut_sq) {
+            if (rij_sq < rcut_sq) {
         rij = sqrt(rij_sq);
         dens = splineEval(rij, electron_density, ELECTRON_DENSITY_ROWS);
         densityi += dens;
@@ -162,51 +162,51 @@ void get_forces_AL(double forces[][3], double positions[][3], double cell_length
   
   /* Loop over atoms to calculate derivative of embedding function
    and embedding function. */
-	for (i = 0; i < nbr_atoms; i++) {
-		dUembed_drho[i] = splineEvalDiff(density[i], embedding_energy, EMBEDDING_ENERGY_ROWS);
-	}
+    for (i = 0; i < nbr_atoms; i++) {
+        dUembed_drho[i] = splineEvalDiff(density[i], embedding_energy, EMBEDDING_ENERGY_ROWS);
+    }
   
   /* Compute forces on atoms. */
-	/* Loop over atoms again :-(. */
+    /* Loop over atoms again :-(. */
   
   for (i = 0; i < nbr_atoms; i++) {
     /* Periodically translate coords of current particle to positive quadrants */
-		sxi = sx[i] - floor(sx[i]);
-		syi = sy[i] - floor(sy[i]);
-		szi = sz[i] - floor(sz[i]);
+        sxi = sx[i] - floor(sx[i]);
+        syi = sy[i] - floor(sy[i]);
+        szi = sz[i] - floor(sz[i]);
     
     densityi = density[i];
-		
-		/* Loop over other atoms. */
-		for (j = i + 1; j < nbr_atoms; j++) {
+        
+        /* Loop over other atoms. */
+        for (j = i + 1; j < nbr_atoms; j++) {
       /* Periodically translate atom j to positive quadrants and calculate distance to it. */
-			sxij = sxi - (sx[j] - floor(sx[j]));
-			syij = syi - (sy[j] - floor(sy[j]));
-			szij = szi - (sz[j] - floor(sz[j]));
+            sxij = sxi - (sx[j] - floor(sx[j]));
+            syij = syi - (sy[j] - floor(sy[j]));
+            szij = szi - (sz[j] - floor(sz[j]));
       
       /* Periodic boundary conditions. */
-			sxij = sxij - (int)floor(sxij + 0.5);
-			syij = syij - (int)floor(syij + 0.5);
-			szij = szij - (int)floor(szij + 0.5);
+            sxij = sxij - (int)floor(sxij + 0.5);
+            syij = syij - (int)floor(syij + 0.5);
+            szij = szij - (int)floor(szij + 0.5);
       
       /* squared distance between atom i and j */
-			rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
+            rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
       
       /* Add force and energy contribution if distance between atoms smaller than rcut */
-			if (rij_sq < rcut_sq) {
+            if (rij_sq < rcut_sq) {
         rij = sqrt(rij_sq);
         dUpair_dr = splineEvalDiff(rij, pair_potential, PAIR_POTENTIAL_ROWS);
         drho_dr = splineEvalDiff(rij, electron_density, ELECTRON_DENSITY_ROWS);
         
         /* Add force contribution from i-j interaction */
-				force = -(dUpair_dr + (dUembed_drho[i] + dUembed_drho[j])*drho_dr) / rij;
-				fx[i] += force * sxij * cell_length;
-				fy[i] += force * syij * cell_length;
-				fz[i] += force * szij * cell_length;
-				fx[j] -= force * sxij * cell_length;
-				fy[j] -= force * syij * cell_length;
-				fz[j] -= force * szij * cell_length;
-			}
+                force = -(dUpair_dr + (dUembed_drho[i] + dUembed_drho[j])*drho_dr) / rij;
+                fx[i] += force * sxij * cell_length;
+                fy[i] += force * syij * cell_length;
+                fz[i] += force * szij * cell_length;
+                fx[j] -= force * sxij * cell_length;
+                fy[j] -= force * syij * cell_length;
+                fz[j] -= force * szij * cell_length;
+            }
     }
   }
   
@@ -259,29 +259,29 @@ double get_energy_AL(double positions[][3], double cell_length, int nbr_atoms)
   
   for (i = 0; i < nbr_atoms; i++) {
     /* Periodically translate coords of current particle to positive quadrants */
-		sxi = sx[i] - floor(sx[i]);
-		syi = sy[i] - floor(sy[i]);
-		szi = sz[i] - floor(sz[i]);
+        sxi = sx[i] - floor(sx[i]);
+        syi = sy[i] - floor(sy[i]);
+        szi = sz[i] - floor(sz[i]);
     
     densityi = density[i];
-		
-		/* Loop over other atoms. */
-		for (j = i + 1; j < nbr_atoms; j++) {
+        
+        /* Loop over other atoms. */
+        for (j = i + 1; j < nbr_atoms; j++) {
       /* Periodically translate atom j to positive quadrants and calculate distance to it. */
-			sxij = sxi - (sx[j] - floor(sx[j]));
-			syij = syi - (sy[j] - floor(sy[j]));
-			szij = szi - (sz[j] - floor(sz[j]));
+            sxij = sxi - (sx[j] - floor(sx[j]));
+            syij = syi - (sy[j] - floor(sy[j]));
+            szij = szi - (sz[j] - floor(sz[j]));
       
       /* Periodic boundary conditions. */
-			sxij = sxij - (int)floor(sxij + 0.5);
-			syij = syij - (int)floor(syij + 0.5);
-			szij = szij - (int)floor(szij + 0.5);
+            sxij = sxij - (int)floor(sxij + 0.5);
+            syij = syij - (int)floor(syij + 0.5);
+            szij = szij - (int)floor(szij + 0.5);
       
       /* squared distance between atom i and j */
-			rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
+            rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
       
       /* Add force and energy contribution if distance between atoms smaller than rcut */
-			if (rij_sq < rcut_sq) {
+            if (rij_sq < rcut_sq) {
         rij = sqrt(rij_sq);
         dens = splineEval(rij, electron_density, ELECTRON_DENSITY_ROWS);
         densityi += dens;
@@ -297,9 +297,9 @@ double get_energy_AL(double positions[][3], double cell_length, int nbr_atoms)
   
   /* Loop over atoms to calculate derivative of embedding function
    and embedding function. */
-	for (i = 0; i < nbr_atoms; i++) {
-		energy += splineEval(density[i], embedding_energy, EMBEDDING_ENERGY_ROWS);
-	}
+    for (i = 0; i < nbr_atoms; i++) {
+        energy += splineEval(density[i], embedding_energy, EMBEDDING_ENERGY_ROWS);
+    }
   
   free(sx); free(sy); free(sz); sx = NULL; sy = NULL; sz = NULL;
   free(density); density = NULL;
@@ -344,29 +344,29 @@ double get_virial_AL(double positions[][3], double cell_length, int nbr_atoms)
   
   for (i = 0; i < nbr_atoms; i++) {
     /* Periodically translate coords of current particle to positive quadrants */
-		sxi = sx[i] - floor(sx[i]);
-		syi = sy[i] - floor(sy[i]);
-		szi = sz[i] - floor(sz[i]);
+        sxi = sx[i] - floor(sx[i]);
+        syi = sy[i] - floor(sy[i]);
+        szi = sz[i] - floor(sz[i]);
     
     densityi = density[i];
-		
-		/* Loop over other atoms. */
-		for (j = i + 1; j < nbr_atoms; j++) {
+        
+        /* Loop over other atoms. */
+        for (j = i + 1; j < nbr_atoms; j++) {
       /* Periodically translate atom j to positive quadrants and calculate distance to it. */
-			sxij = sxi - (sx[j] - floor(sx[j]));
-			syij = syi - (sy[j] - floor(sy[j]));
-			szij = szi - (sz[j] - floor(sz[j]));
+            sxij = sxi - (sx[j] - floor(sx[j]));
+            syij = syi - (sy[j] - floor(sy[j]));
+            szij = szi - (sz[j] - floor(sz[j]));
       
       /* Periodic boundary conditions. */
-			sxij = sxij - (int)floor(sxij + 0.5);
-			syij = syij - (int)floor(syij + 0.5);
-			szij = szij - (int)floor(szij + 0.5);
+            sxij = sxij - (int)floor(sxij + 0.5);
+            syij = syij - (int)floor(syij + 0.5);
+            szij = szij - (int)floor(szij + 0.5);
       
       /* squared distance between atom i and j */
-			rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
+            rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
       
       /* Add force and energy contribution if distance between atoms smaller than rcut */
-			if (rij_sq < rcut_sq) {
+            if (rij_sq < rcut_sq) {
         rij = sqrt(rij_sq);
         dens = splineEval(rij, electron_density, ELECTRON_DENSITY_ROWS);
         densityi += dens;
@@ -378,49 +378,49 @@ double get_virial_AL(double positions[][3], double cell_length, int nbr_atoms)
   
   /* Loop over atoms to calculate derivative of embedding function
    and embedding function. */
-	for (i = 0; i < nbr_atoms; i++) {
-		dUembed_drho[i] = splineEvalDiff(density[i], embedding_energy, EMBEDDING_ENERGY_ROWS);
-	}
+    for (i = 0; i < nbr_atoms; i++) {
+        dUembed_drho[i] = splineEvalDiff(density[i], embedding_energy, EMBEDDING_ENERGY_ROWS);
+    }
   
   /* Compute forces on atoms. */
-	/* Loop over atoms again :-(. */
+    /* Loop over atoms again :-(. */
   
   virial = 0;
   
   for (i = 0; i < nbr_atoms; i++) {
     /* Periodically translate coords of current particle to positive quadrants */
-		sxi = sx[i] - floor(sx[i]);
-		syi = sy[i] - floor(sy[i]);
-		szi = sz[i] - floor(sz[i]);
+        sxi = sx[i] - floor(sx[i]);
+        syi = sy[i] - floor(sy[i]);
+        szi = sz[i] - floor(sz[i]);
     
     densityi = density[i];
-		
-		/* Loop over other atoms. */
-		for (j = i + 1; j < nbr_atoms; j++) {
+        
+        /* Loop over other atoms. */
+        for (j = i + 1; j < nbr_atoms; j++) {
       /* Periodically translate atom j to positive quadrants and calculate distance to it. */
-			sxij = sxi - (sx[j] - floor(sx[j]));
-			syij = syi - (sy[j] - floor(sy[j]));
-			szij = szi - (sz[j] - floor(sz[j]));
+            sxij = sxi - (sx[j] - floor(sx[j]));
+            syij = syi - (sy[j] - floor(sy[j]));
+            szij = szi - (sz[j] - floor(sz[j]));
       
       /* Periodic boundary conditions. */
-			sxij = sxij - (int)floor(sxij + 0.5);
-			syij = syij - (int)floor(syij + 0.5);
-			szij = szij - (int)floor(szij + 0.5);
+            sxij = sxij - (int)floor(sxij + 0.5);
+            syij = syij - (int)floor(syij + 0.5);
+            szij = szij - (int)floor(szij + 0.5);
       
       /* squared distance between atom i and j */
-			rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
+            rij_sq = cell_length_sq * (sxij*sxij + syij*syij + szij*szij);
       
       /* Add force and energy contribution if distance between atoms smaller than rcut */
-			if (rij_sq < rcut_sq) {
+            if (rij_sq < rcut_sq) {
         rij = sqrt(rij_sq);
         dUpair_dr = splineEvalDiff(rij, pair_potential, PAIR_POTENTIAL_ROWS);
-				drho_dr = splineEvalDiff(rij, electron_density, ELECTRON_DENSITY_ROWS);
+                drho_dr = splineEvalDiff(rij, electron_density, ELECTRON_DENSITY_ROWS);
         
         /* Add virial contribution from i-j interaction */
-				force = -(dUpair_dr + (dUembed_drho[i] + dUembed_drho[j])*drho_dr) / rij;
+                force = -(dUpair_dr + (dUembed_drho[i] + dUembed_drho[j])*drho_dr) / rij;
         
         virial += force * rij_sq;
-			}
+            }
     }
   }
   
@@ -434,13 +434,39 @@ double get_virial_AL(double positions[][3], double cell_length, int nbr_atoms)
   
 }
 
-void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], double pos[][3], double L, double dt, double m, double *E_pot, double *E_kin)
+void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], double a, double dt, double m, double T[n_timesteps+1], double P[n_timesteps+1], double *E_pot, double *E_kin, double tau_T, double tau_P, double T_eq, double P_eq, double q1[n_timesteps][2], double q2[n_timesteps][2], double q3[n_timesteps][2])
 {
     double forces[nbr_atoms][3];
     double v_abs_2[nbr_atoms];
     
-    get_forces_AL(forces, pos, 4 * L, nbr_atoms);
+    double a_T[n_timesteps+1];
+    double a_P[n_timesteps+1];
+    
+    double k = 8.6173 * pow(10, -5);
+    double kappa_T = 0.01385;
+    
+    double L = 4.0 *  a;
+    double V = pow(L, 3);
+    
+    for (int j = 0; j < nbr_atoms; j++) {
+        for (int d=0; d<3; d++){
+            v[j][d] = 0;
+            }
+        }
+    
+    /* a(t) */
+    get_forces_AL(forces, pos, L, nbr_atoms);
     for (int i = 0; i < n_timesteps+1; i++) {
+        
+        /* For melting the system  */
+//        if (i<3000) {
+//            T_eq = 1500.0 + 275.15;
+//        }
+//        else {
+//            T_eq = 700.0 + 273.15;
+//        }
+        
+        
         /* v(t+dt/2) */
         for (int j = 0; j < nbr_atoms; j++) {
             for (int d=0; d<3; d++){
@@ -455,7 +481,7 @@ void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], dou
         }
             
         /* a(t+dt) */
-        get_forces_AL(forces, pos, 4 * L, nbr_atoms);
+        get_forces_AL(forces, pos, L, nbr_atoms);
         
         /* v(t+dt) */
         
@@ -465,103 +491,47 @@ void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], dou
                 v[j][d] += dt * 0.5 * forces[j][d] / m;
                 v_abs_2[j] += pow(v[j][d],2);
             }
+            E_kin[i] += m * v_abs_2[j] / 2;
         }
         
-        for (int j = 0; j < nbr_atoms; j++) {
-            if (isnan(v_abs_2[j]) != 1 && fabs(v_abs_2[j]) < 100000.0){
-                E_kin[i] += m * v_abs_2[j] / (64 * 2);
-            }
-            else {
-                v_abs_2[j]=0.0;
-            }
-        }
-
-        E_pot[i] = get_energy_AL(pos, 4 * L, 256) / 64;
         
-    }
-}
-
-void Equilibration(int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], int n_timesteps, double dt, double a, double tau_T, double tau_P, double T_eq, double P_eq, double m, double T[n_timesteps+1], double P[n_timesteps+1], double a_eq[n_timesteps+1], double q[5][3][n_timesteps+1]){
-    
-    double a_T[n_timesteps+1];
-    double a_P[n_timesteps+1];
-    double k = 8.6173 * pow(10, -5);
-    double v_abs_2[nbr_atoms];
-    double V_eq[n_timesteps+1];
-    double kappa_T = 0.01385;
-    int P_start = 10000;
-    
-    a_eq[0] = a;
-    V_eq[0] = pow(a_eq[0], 3);
-    
-    for (int j = 0; j < nbr_atoms; j++){
-        for (int d = 0; d < 3; d++){
-            if (fabs(v[j][d]) < 1000.0){
-                v_abs_2[j] += pow(v[j][d],2);
-            }
-            else{
-                v_abs_2[j] = 0.0;
-            }
-        }
-        T[0] += (1 / (3 * nbr_atoms * k)) * v_abs_2[j] * m;
-
-    }
-    
-    a_T[0] = 1 + 2 * dt / tau_T * (T_eq - T[0]) / T[0];
-    
-    for (int i = 0; i < P_start + 1; i++){
+        P[i] = 1 / V * (2 / 3 * E_kin[i] + get_virial_AL(pos, L, 256)) / 160.21766208;
+        a_P[i] = 1 - kappa_T * dt / tau_P * (P_eq - P[i]);
         
-        a_eq[i] = pos[1][0] - pos[0][0];
-        V_eq[i] = pow(a_eq[i], 3);
+        T[i] = 2 / (3 * nbr_atoms * k) * E_kin[i];
         
+        a_T[i] = 1 + 2 * dt / tau_T * (T_eq - T[i]) / T[i];
+        
+        E_kin[i] = 0.0;
+        
+        V = V * a_P[i];
+        L = pow(V, 1.0/3.0);
+
         for (int j = 0; j < nbr_atoms; j++){
-
-            v_abs_2[j] = a_T[i] * v_abs_2[j];
-
-            T[i] += (1 / (3 * nbr_atoms * k)) * v_abs_2[j] * m;
-
-            }
-        
-        
-        a_T[i+1] = 1 + (2 * dt / tau_T) * (T_eq - T[i]) / T[i];
-
-
-        }
-    
-    for (int j = 0; j < nbr_atoms; j++){
-        for (int d = 0; d < 3; d++){
-            if (fabs(v[j][d]) < 10000.0){
-                v_abs_2[j] += pow(v[j][d],2);
-            }
-            else{
-                v_abs_2[j] = 0.0;
-            }
-        }
-        P[P_start] += (1 / (3 * V_eq[P_start])) * v_abs_2[j] * m * 160.21766208;
-    }
-    
-    P[P_start] += (1 / V_eq[P_start]) * get_virial_AL(pos, 4 * a_eq[P_start], 256) * 160.21766208;
-    
-    a_P[P_start] = 1 - kappa_T * dt / tau_P * (P_eq - P[P_start]);
-    
-    for (int i = P_start; i < n_timesteps; i++){
-        
-        a_eq[i] = pos[1][0] - pos[0][0];
-        V_eq[i] = pow(a_eq[i], 3);
-        
-        for (int j = 0; j < nbr_atoms; j++){
+            v_abs_2[j] = 0.0;
             for (int d = 0; d < 3; d++){
                 pos[j][d] = pow(a_P[i], 1.0/3.0) * pos[j][d];
+                v[j][d] = pow(a_T[i], 1.0/2.0) * v[j][d];
                 
+                v_abs_2[j] += pow(v[j][d],2);
+            
             }
-            P[i] += (1 / (3 * V_eq[i])) * v_abs_2[j] * m * 160.21766208;
+            E_kin[i] += m * v_abs_2[j] / 2;
         }
-        P[i] += (1 / V_eq[i]) * get_virial_AL(pos, 4 * a_eq[i], 256) * 160.21766208;
+
+        P[i] = 1 / V * (2 / 3 * E_kin[i] + get_virial_AL(pos, L, 256)) / 160.21766208;
+        T[i] = 2 / (3 * nbr_atoms * k) * E_kin[i];
         
-        a_P[i+1] = 1 - (kappa_T * dt / tau_P) * (P_eq - P[i]);
+        for (int d = 0; d < 2; d++){
+            
+            q1[i][d] = pos[49][d];
+            q2[i][d] = pos[231][d];
+            q3[i][d] = pos[67][d];
+        }
         
-        printf("diff: %f\n", P_eq-P[i]);
-        
+        printf("Iteration: %d T: %f P: %f\n",i, T[i], P[i]);
+     
+        E_pot[i] = get_energy_AL(pos, L, nbr_atoms);
+
     }
-    
 }
