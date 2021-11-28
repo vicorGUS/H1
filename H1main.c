@@ -12,7 +12,7 @@
 #include "H1lattice.h"
 #include "H1potential.h"
 
-void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], double a, double dt, double m, double T[n_timesteps+1], double P[n_timesteps+1], double *E_pot, double *E_kin, double tau_T, double tau_P, double T_eq, double P_eq, double q1[n_timesteps][2], double q2[n_timesteps][2], double q3[n_timesteps][2]);
+void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], double a, double dt, double m, double T[n_timesteps+1], double P[n_timesteps+1], double *E_pot, double *E_kin, double tau_T, double tau_P, double T_eq, double P_eq, double q1[n_timesteps][2], double q2[n_timesteps][2], double q3[n_timesteps][2], double a_eq[n_timesteps]);
 
 void arange(double *array, double start, int len_t, double dt){
     for(int i = 0; i < len_t; i++){
@@ -128,8 +128,8 @@ int main()
     double a=4.0478;
     double m=0.002796;
 
-    int timestep = 10000;
-    double dt = 1e-2;
+    int timestep = 20000;
+    double dt = 2e-3;
 
     double v[256][3];
     double pos_dev[256][3];
@@ -139,15 +139,17 @@ int main()
     double T[timestep+1];
     double P[timestep+1];
     
-    double T_eq = 500.0 + 273.15;
+    double T_eq = 700.0 + 273.15;
     double P_eq = 1.0e-4;
     
-    double tau_T = 2e2 * dt;
-    double tau_P = 1e-1 * dt;
+    double tau_T = 1e3 * dt;
+    double tau_P = 2e-2 * dt;
     
     double q1[timestep][2];
     double q2[timestep][2];
     double q3[timestep][2];
+    
+    double a_eq[timestep];
 
     init_fcc(pos_dev, Nc, a);
 
@@ -158,28 +160,31 @@ int main()
             pos_dev[j][d] += -0.263107 + (double) rand() / ((double) RAND_MAX / (2 * 0.263107));
         }
     }
-    velocity_verlet(timestep, 256, v, pos_dev, a, dt, m, T, P, Ep, Ek, tau_T, tau_P, T_eq, P_eq, q1, q2, q3);
+    velocity_verlet(timestep, 256, v, pos_dev, a, dt, m, T, P, Ep, Ek, tau_T, tau_P, T_eq, P_eq, q1, q2, q3, a_eq);
 
     double T_avg = 0.0;
     double P_avg = 0.0;
-    for (int i = 3000; i < timestep+1; i++){
-        T_avg += T[i] / (timestep+1 - 1000.0);
-        P_avg += P[i] / (timestep+1 - 1000.0);
+    double a_avg = 0.0;
+    for (int i = 15000; i < timestep+1; i++){
+        T_avg += T[i] / (timestep+1 - 15000.0);
+        P_avg += P[i] / (timestep+1 - 15000.0);
+        a_avg += a_eq[i] / (timestep+1 - 15000.0);
     }
-
+    
     double time_array[timestep+1];
     arange(time_array, 0, timestep, dt);
 
-    write_to_file("Ep.csv", time_array, Ep, timestep);
-    write_to_file("Ek.csv", time_array, Ek, timestep);
+    write_to_file("Ep_700.csv", time_array, Ep, timestep);
+    write_to_file("Ek_700.csv", time_array, Ek, timestep);
     
-    write_to_file("T.csv", time_array, T, timestep);
-    write_to_file("P.csv", time_array, P, timestep);
+    write_to_file("T_700.csv", time_array, T, timestep);
+    write_to_file("P_700.csv", time_array, P, timestep);
     
-    trajectiores("q.csv", timestep, q1, q2, q3);
+    trajectiores("q_700.csv", timestep, q1, q2, q3);
 
     printf("T_avg = %f T_eq = %f\n", T_avg, T_eq);
     printf("P_avg = %f P_eq = %f\n", P_avg, P_eq);
+    printf("a_avg = %f\n", a_avg);
 
     return 0;
 }

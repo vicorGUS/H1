@@ -434,7 +434,7 @@ double get_virial_AL(double positions[][3], double cell_length, int nbr_atoms)
   
 }
 
-void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], double a, double dt, double m, double T[n_timesteps+1], double P[n_timesteps+1], double *E_pot, double *E_kin, double tau_T, double tau_P, double T_eq, double P_eq, double q1[n_timesteps][2], double q2[n_timesteps][2], double q3[n_timesteps][2])
+void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], double pos[nbr_atoms][3], double a, double dt, double m, double T[n_timesteps+1], double P[n_timesteps+1], double *E_pot, double *E_kin, double tau_T, double tau_P, double T_eq, double P_eq, double q1[n_timesteps][2], double q2[n_timesteps][2], double q3[n_timesteps][2], double a_eq[n_timesteps])
 {
     double forces[nbr_atoms][3];
     double v_abs_2[nbr_atoms];
@@ -459,13 +459,16 @@ void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], dou
     for (int i = 0; i < n_timesteps+1; i++) {
         
         /* For melting the system  */
-//        if (i<3000) {
-//            T_eq = 1500.0 + 275.15;
-//        }
-//        else {
-//            T_eq = 700.0 + 273.15;
-//        }
-        
+
+        if (i>0){
+            T_eq = (700 + 273.15) + 0.16 * i;
+        }
+        if (i>5000){
+            T_eq = (1700 + 275.15) - 0.16 * (i - 5000);
+        }
+        if (i>10000){
+            T_eq = 700 + 273.15;
+        }
         
         /* v(t+dt/2) */
         for (int j = 0; j < nbr_atoms; j++) {
@@ -496,14 +499,17 @@ void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], dou
         
         
         P[i] = 1 / V * (2 / 3 * E_kin[i] + get_virial_AL(pos, L, 256)) / 160.21766208;
-        a_P[i] = 1 - kappa_T * dt / tau_P * (P_eq - P[i]);
+        
         
         T[i] = 2 / (3 * nbr_atoms * k) * E_kin[i];
         
+        /* Scaling of velocities and position for equilibration */
+        
         a_T[i] = 1 + 2 * dt / tau_T * (T_eq - T[i]) / T[i];
-        
+        a_P[i] = 1 - kappa_T * dt / tau_P * (P_eq - P[i]);
+
         E_kin[i] = 0.0;
-        
+
         V = V * a_P[i];
         L = pow(V, 1.0/3.0);
 
@@ -512,26 +518,29 @@ void velocity_verlet(int n_timesteps, int nbr_atoms, double v[nbr_atoms][3], dou
             for (int d = 0; d < 3; d++){
                 pos[j][d] = pow(a_P[i], 1.0/3.0) * pos[j][d];
                 v[j][d] = pow(a_T[i], 1.0/2.0) * v[j][d];
-                
+
                 v_abs_2[j] += pow(v[j][d],2);
-            
+
             }
             E_kin[i] += m * v_abs_2[j] / 2;
         }
 
         P[i] = 1 / V * (2 / 3 * E_kin[i] + get_virial_AL(pos, L, 256)) / 160.21766208;
         T[i] = 2 / (3 * nbr_atoms * k) * E_kin[i];
-        
+
         for (int d = 0; d < 2; d++){
-            
+
             q1[i][d] = pos[49][d];
             q2[i][d] = pos[231][d];
             q3[i][d] = pos[67][d];
         }
-        
-        printf("Iteration: %d T: %f P: %f\n",i, T[i], P[i]);
+
+
+        a_eq[i] = pow(V, 1.0/3.0) / 4.0;
      
         E_pot[i] = get_energy_AL(pos, L, nbr_atoms);
+        
+        printf("Iteration: %d T: %f P: %f\n",i, T[i], P[i]);
 
     }
 }

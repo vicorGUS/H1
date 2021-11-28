@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-trajectories = np.genfromtxt('q.csv', delimiter=',')
+trajectories = np.genfromtxt('q_700.csv', delimiter=',')
 
 plt.figure(figsize=(16, 10))
 
@@ -13,4 +13,4 @@ plt.legend(loc='best')
 plt.xlabel("Position (Å)")
 plt.ylabel("Position (Å)")
 
-plt.savefig('Trajectories.jpg')
+plt.savefig('Trajectories_700.jpg')
